@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>迷路ゲーム</title>
+<title>避けるゲーム</title>
 
 <style>
 body{
@@ -16,121 +16,122 @@ h1{
     margin-top:20px;
 }
 
-#maze{
-    display:grid;
-    grid-template-columns:repeat(10,40px);
-    grid-template-rows:repeat(10,40px);
-    gap:2px;
-    justify-content:center;
-    margin-top:20px;
+#game{
+    width:400px;
+    height:500px;
+    background:#222;
+    margin:20px auto;
+    position:relative;
+    overflow:hidden;
+    border:3px solid #555;
 }
 
-.cell{
+#player{
     width:40px;
     height:40px;
-}
-
-.wall{
-    background:#333;
-}
-
-.path{
-    background:#ddd;
-}
-
-.player{
     background:#3b82f6;
+    position:absolute;
+    bottom:10px;
+    left:180px;
 }
 
-.goal{
-    background:#22c55e;
+.enemy{
+    width:40px;
+    height:40px;
+    background:#ef4444;
+    position:absolute;
+}
+
+#score{
+    font-size:20px;
 }
 </style>
 </head>
 
 <body>
 
-<h1>迷路ゲーム</h1>
-<p>矢印キーで青い四角を動かしてゴールへ！</p>
+<h1>避けるゲーム</h1>
+<p>← → キーで青い四角を動かして赤いブロックを避けよう！</p>
+<div id="score">スコア: 0</div>
 
-<div id="maze"></div>
+<div id="game">
+<div id="player"></div>
+</div>
 
 <script>
 
-const mazeData = [
-[1,1,1,1,1,1,1,1,1,1],
-[1,0,0,0,1,0,0,0,0,1],
-[1,0,1,0,1,0,1,1,0,1],
-[1,0,1,0,0,0,0,1,0,1],
-[1,0,1,1,1,1,0,1,0,1],
-[1,0,0,0,0,1,0,1,0,1],
-[1,1,1,1,0,1,0,1,0,1],
-[1,0,0,1,0,0,0,1,0,1],
-[1,0,0,0,0,1,0,0,0,1],
-[1,1,1,1,1,1,1,1,1,1]
-];
+const game = document.getElementById("game");
+const player = document.getElementById("player");
+const scoreText = document.getElementById("score");
 
-let player = {x:1,y:1};
-let goal = {x:8,y:8};
-
-const maze = document.getElementById("maze");
-
-function drawMaze(){
-
-    maze.innerHTML="";
-
-    for(let y=0;y<10;y++){
-        for(let x=0;x<10;x++){
-
-            const cell=document.createElement("div");
-            cell.classList.add("cell");
-
-            if(mazeData[y][x]===1){
-                cell.classList.add("wall");
-            }else{
-                cell.classList.add("path");
-            }
-
-            if(x===player.x && y===player.y){
-                cell.classList.add("player");
-            }
-
-            if(x===goal.x && y===goal.y){
-                cell.classList.add("goal");
-            }
-
-            maze.appendChild(cell);
-        }
-    }
-}
-
-function move(dx,dy){
-
-    const nx = player.x + dx;
-    const ny = player.y + dy;
-
-    if(mazeData[ny][nx]===0){
-        player.x = nx;
-        player.y = ny;
-    }
-
-    if(player.x===goal.x && player.y===goal.y){
-        setTimeout(()=>alert("ゴール！おめでとう！"),100);
-    }
-
-    drawMaze();
-}
+let playerX = 180;
+let score = 0;
+let enemies = [];
 
 document.addEventListener("keydown",(e)=>{
 
-    if(e.key==="ArrowUp") move(0,-1);
-    if(e.key==="ArrowDown") move(0,1);
-    if(e.key==="ArrowLeft") move(-1,0);
-    if(e.key==="ArrowRight") move(1,0);
+    if(e.key==="ArrowLeft"){
+        playerX -= 20;
+    }
+
+    if(e.key==="ArrowRight"){
+        playerX += 20;
+    }
+
+    if(playerX < 0) playerX = 0;
+    if(playerX > 360) playerX = 360;
+
+    player.style.left = playerX + "px";
 
 });
 
-drawMaze();
+function createEnemy(){
+
+    const enemy = document.createElement("div");
+    enemy.classList.add("enemy");
+
+    const x = Math.floor(Math.random()*10)*40;
+    enemy.style.left = x + "px";
+    enemy.style.top = "0px";
+
+    game.appendChild(enemy);
+
+    enemies.push({
+        element:enemy,
+        x:x,
+        y:0
+    });
+
+}
+
+function update(){
+
+    score++;
+    scoreText.textContent = "スコア: " + score;
+
+    if(Math.random() < 0.03){
+        createEnemy();
+    }
+
+    enemies.forEach((enemy)=>{
+
+        enemy.y += 5;
+        enemy.element.style.top = enemy.y + "px";
+
+        if(
+            enemy.y + 40 > 450 &&
+            enemy.x < playerX + 40 &&
+            enemy.x + 40 > playerX
+        ){
+            alert("ゲームオーバー！ スコア: " + score);
+            location.reload();
+        }
+
+    });
+
+}
+
+setInterval(update,30);
 
 </script>
 
