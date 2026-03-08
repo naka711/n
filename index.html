@@ -1,130 +1,149 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<title>追いかけっこゲーム</title>
-
-<style>
-body{
-    background:#111;
-    color:white;
-    text-align:center;
-    font-family:sans-serif;
-}
-
-#game{
-    width:500px;
-    height:500px;
-    background:#222;
-    margin:20px auto;
-    position:relative;
-    border:3px solid #555;
-}
-
-.player{
-    width:30px;
-    height:30px;
-    background:#3b82f6;
-    position:absolute;
-}
-
-.enemy{
-    width:30px;
-    height:30px;
-    background:#ef4444;
-    position:absolute;
-}
-
-#score{
-    font-size:20px;
-}
-</style>
+    <meta charset="UTF-8">
+    <title>HTML5 Simple Runner</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #5c94fc; font-family: sans-serif; }
+        canvas { display: block; background: #5c94fc; margin: 0 auto; }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; font-size: 20px; text-shadow: 2px 2px #000; }
+    </style>
 </head>
-
 <body>
-
-<h1>追いかけっこゲーム</h1>
-<p>矢印キーで逃げよう！</p>
-<div id="score">スコア: 0</div>
-
-<div id="game">
-<div id="player" class="player"></div>
-<div id="enemy" class="enemy"></div>
-</div>
+    <div id="ui">SCORE: <span id="score">0</span></div>
+    <canvas id="gameCanvas"></canvas>
 
 <script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
 
-const player = document.getElementById("player");
-const enemy = document.getElementById("enemy");
-const scoreText = document.getElementById("score");
-
-let px = 200;
-let py = 200;
-
-let ex = 50;
-let ey = 50;
-
+// ゲーム設定
+canvas.width = 800;
+canvas.height = 400;
+const gravity = 0.8;
 let score = 0;
+let gameActive = true;
 
-player.style.left = px + "px";
-player.style.top = py + "px";
+// プレイヤー設定
+const player = {
+    x: 50, y: 300, w: 30, h: 30,
+    vx: 0, vy: 0,
+    speed: 5, jumpPower: -15,
+    grounded: false,
+    color: "#ff0000"
+};
 
-enemy.style.left = ex + "px";
-enemy.style.top = ey + "px";
+// 敵・障害物
+let enemies = [];
+let frames = 0;
 
+// キー入力
 const keys = {};
+window.addEventListener('keydown', (e) => keys[e.code] = true);
+window.addEventListener('keyup', (e) => keys[e.code] = false);
 
-document.addEventListener("keydown",e=>{
-    keys[e.key]=true;
-});
-
-document.addEventListener("keyup",e=>{
-    keys[e.key]=false;
-});
-
-function update(){
-
-    if(keys["ArrowLeft"]) px -= 5;
-    if(keys["ArrowRight"]) px += 5;
-    if(keys["ArrowUp"]) py -= 5;
-    if(keys["ArrowDown"]) py += 5;
-
-    if(px<0) px=0;
-    if(px>470) px=470;
-    if(py<0) py=0;
-    if(py>470) py=470;
-
-    player.style.left = px+"px";
-    player.style.top = py+"px";
-
-    // 敵が追いかける
-    if(px > ex) ex += 2;
-    if(px < ex) ex -= 2;
-    if(py > ey) ey += 2;
-    if(py < ey) ey -= 2;
-
-    enemy.style.left = ex+"px";
-    enemy.style.top = ey+"px";
-
-    // 当たり判定
-    if(
-        px < ex+30 &&
-        px+30 > ex &&
-        py < ey+30 &&
-        py+30 > ey
-    ){
-        alert("捕まった！スコア: "+score);
-        location.reload();
+function spawnEnemy() {
+    if (frames % 100 === 0) {
+        enemies.push({
+            x: canvas.width, y: 320, w: 30, h: 30,
+            color: "#555", speed: 3 + Math.random() * 2
+        });
     }
-
-    score++;
-    scoreText.textContent = "スコア: "+score;
-
 }
 
-setInterval(update,30);
+function update() {
+    if (!gameActive) return;
 
+    // 左右移動
+    if (keys['ArrowRight']) player.vx = player.speed;
+    else if (keys['ArrowLeft']) player.vx = -player.speed;
+    else player.vx *= 0.8;
+
+    // ジャンプ
+    if (keys['Space'] && player.grounded) {
+        player.vy = player.jumpPower;
+        player.grounded = false;
+    }
+
+    // 重力と移動反映
+    player.vy += gravity;
+    player.x += player.vx;
+    player.y += player.vy;
+
+    // 地面との当たり判定
+    if (player.y > 320) {
+        player.y = 320;
+        player.vy = 0;
+        player.grounded = true;
+    }
+
+    // 画面外防止
+    if (player.x < 0) player.x = 0;
+    if (player.x > canvas.width - player.w) player.x = canvas.width - player.w;
+
+    // 敵の更新
+    enemies.forEach((enemy, index) => {
+        enemy.x -= enemy.speed;
+
+        // プレイヤーとの当たり判定
+        if (player.x < enemy.x + enemy.w && player.x + player.w > enemy.x &&
+            player.y < enemy.y + enemy.h && player.y + player.h > enemy.y) {
+            
+            // 上から踏んだ場合
+            if (player.vy > 0 && player.y < enemy.y) {
+                enemies.splice(index, 1);
+                player.vy = player.jumpPower / 1.5; // 小ジャンプ
+                score += 100;
+            } else {
+                // 横からぶつかったらゲームオーバー
+                gameActive = false;
+                alert("GAME OVER! SCORE: " + score);
+                location.reload();
+            }
+        }
+
+        // 画面外に出た敵を削除
+        if (enemy.x + enemy.w < 0) {
+            enemies.splice(index, 1);
+            score += 10;
+        }
+    });
+
+    scoreEl.innerText = score;
+    frames++;
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 地面
+    ctx.fillStyle = "#885500";
+    ctx.fillRect(0, 350, canvas.width, 50);
+    ctx.fillStyle = "#00aa00";
+    ctx.fillRect(0, 350, canvas.width, 10);
+
+    // プレイヤー（簡易マリオ）
+    ctx.fillStyle = player.color;
+    ctx.fillRect(player.x, player.y, player.w, player.h);
+    // 帽子風の飾り
+    ctx.fillStyle = "black";
+    ctx.fillRect(player.x + 5, player.y + 5, 10, 5);
+
+    // 敵（簡易クリボー風）
+    enemies.forEach(enemy => {
+        ctx.fillStyle = enemy.color;
+        ctx.fillRect(enemy.x, enemy.y, enemy.w, enemy.h);
+    });
+
+    if (gameActive) {
+        spawnEnemy();
+        update();
+        requestAnimationFrame(draw);
+    }
+}
+
+draw();
 </script>
-
 </body>
 </html>
