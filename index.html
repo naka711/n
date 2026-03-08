@@ -2,36 +2,24 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>横スクロールゲーム</title>
+<title>マリオ風ゲーム</title>
 
 <style>
 body{
     margin:0;
     background:#87ceeb;
-    font-family:sans-serif;
     text-align:center;
-}
-
-h1{
-    margin:10px;
+    font-family:sans-serif;
 }
 
 #game{
     width:800px;
-    height:300px;
+    height:350px;
     margin:auto;
-    background:#87ceeb;
     position:relative;
     overflow:hidden;
+    background:#87ceeb;
     border:3px solid black;
-}
-
-#ground{
-    position:absolute;
-    bottom:0;
-    width:2000px;
-    height:40px;
-    background:#654321;
 }
 
 .player{
@@ -41,23 +29,57 @@ h1{
     position:absolute;
 }
 
-.block{
-    width:40px;
-    height:40px;
-    background:#22c55e;
+.platform{
+    width:120px;
+    height:20px;
+    background:#16a34a;
     position:absolute;
+}
+
+.enemy{
+    width:30px;
+    height:30px;
+    background:#dc2626;
+    position:absolute;
+}
+
+.goal{
+    width:30px;
+    height:60px;
+    background:gold;
+    position:absolute;
+}
+
+#ground{
+    position:absolute;
+    bottom:0;
+    width:3000px;
+    height:40px;
+    background:#654321;
 }
 </style>
 </head>
 
 <body>
 
-<h1>横スクロールゲーム</h1>
+<h1>マリオ風ジャンプゲーム</h1>
 <p>← → 移動 / スペース ジャンプ</p>
 
 <div id="game">
+
 <div id="ground"></div>
 <div id="player" class="player"></div>
+
+<div class="platform" style="left:300px;bottom:120px;"></div>
+<div class="platform" style="left:550px;bottom:180px;"></div>
+<div class="platform" style="left:800px;bottom:100px;"></div>
+<div class="platform" style="left:1100px;bottom:160px;"></div>
+
+<div class="enemy" style="left:450px;bottom:40px;"></div>
+<div class="enemy" style="left:900px;bottom:40px;"></div>
+
+<div class="goal" style="left:1300px;bottom:40px;"></div>
+
 </div>
 
 <script>
@@ -65,30 +87,15 @@ h1{
 const player = document.getElementById("player");
 const game = document.getElementById("game");
 
-let x = 50;
+let x = 100;
 let y = 0;
 let vy = 0;
 let onGround = true;
+
 let worldX = 0;
 
 const gravity = 0.8;
-const jumpPower = -12;
-
-const blocks = [
-{ x:300, y:0 },
-{ x:500, y:40 },
-{ x:700, y:0 },
-{ x:900, y:80 },
-{ x:1200, y:0 }
-];
-
-blocks.forEach(b=>{
-    const block=document.createElement("div");
-    block.className="block";
-    block.style.left=b.x+"px";
-    block.style.bottom=(40+b.y)+"px";
-    game.appendChild(block);
-});
+const jump = -12;
 
 const keys = {};
 
@@ -96,7 +103,7 @@ document.addEventListener("keydown",e=>{
     keys[e.key]=true;
 
     if(e.code==="Space" && onGround){
-        vy = jumpPower;
+        vy = jump;
         onGround=false;
     }
 });
@@ -107,13 +114,8 @@ document.addEventListener("keyup",e=>{
 
 function update(){
 
-    if(keys["ArrowRight"]){
-        worldX -= 5;
-    }
-
-    if(keys["ArrowLeft"]){
-        worldX += 5;
-    }
+    if(keys["ArrowRight"]) worldX -= 5;
+    if(keys["ArrowLeft"]) worldX += 5;
 
     vy += gravity;
     y += vy;
@@ -127,9 +129,48 @@ function update(){
     player.style.left = x + "px";
     player.style.bottom = (40 + y) + "px";
 
-    document.querySelectorAll(".block").forEach((b,i)=>{
-        b.style.left = (blocks[i].x + worldX) + "px";
+    document.querySelectorAll(".platform").forEach(p=>{
+        const base = parseInt(p.dataset.base || p.style.left);
+        if(!p.dataset.base) p.dataset.base = base;
+        p.style.left = (base + worldX) + "px";
     });
+
+    document.querySelectorAll(".enemy").forEach(e=>{
+        const base = parseInt(e.dataset.base || e.style.left);
+        if(!e.dataset.base) e.dataset.base = base;
+        e.style.left = (base + worldX) + "px";
+
+        const ex = e.getBoundingClientRect();
+        const px = player.getBoundingClientRect();
+
+        if(
+            px.left < ex.right &&
+            px.right > ex.left &&
+            px.top < ex.bottom &&
+            px.bottom > ex.top
+        ){
+            alert("ゲームオーバー");
+            location.reload();
+        }
+    });
+
+    const goal = document.querySelector(".goal");
+    const base = parseInt(goal.dataset.base || goal.style.left);
+    if(!goal.dataset.base) goal.dataset.base = base;
+    goal.style.left = (base + worldX) + "px";
+
+    const gx = goal.getBoundingClientRect();
+    const px = player.getBoundingClientRect();
+
+    if(
+        px.left < gx.right &&
+        px.right > gx.left &&
+        px.top < gx.bottom &&
+        px.bottom > gx.top
+    ){
+        alert("クリア！");
+        location.reload();
+    }
 
     requestAnimationFrame(update);
 }
