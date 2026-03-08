@@ -2,110 +2,80 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>マリオ風ゲーム</title>
+<title>追いかけっこゲーム</title>
 
 <style>
 body{
-    margin:0;
-    background:#87ceeb;
+    background:#111;
+    color:white;
     text-align:center;
     font-family:sans-serif;
 }
 
 #game{
-    width:800px;
-    height:350px;
-    margin:auto;
+    width:500px;
+    height:500px;
+    background:#222;
+    margin:20px auto;
     position:relative;
-    overflow:hidden;
-    background:#87ceeb;
-    border:3px solid black;
+    border:3px solid #555;
 }
 
 .player{
     width:30px;
     height:30px;
-    background:#2563eb;
-    position:absolute;
-}
-
-.platform{
-    width:120px;
-    height:20px;
-    background:#16a34a;
+    background:#3b82f6;
     position:absolute;
 }
 
 .enemy{
     width:30px;
     height:30px;
-    background:#dc2626;
+    background:#ef4444;
     position:absolute;
 }
 
-.goal{
-    width:30px;
-    height:60px;
-    background:gold;
-    position:absolute;
-}
-
-#ground{
-    position:absolute;
-    bottom:0;
-    width:3000px;
-    height:40px;
-    background:#654321;
+#score{
+    font-size:20px;
 }
 </style>
 </head>
 
 <body>
 
-<h1>マリオ風ジャンプゲーム</h1>
-<p>← → 移動 / スペース ジャンプ</p>
+<h1>追いかけっこゲーム</h1>
+<p>矢印キーで逃げよう！</p>
+<div id="score">スコア: 0</div>
 
 <div id="game">
-
-<div id="ground"></div>
 <div id="player" class="player"></div>
-
-<div class="platform" style="left:300px;bottom:120px;"></div>
-<div class="platform" style="left:550px;bottom:180px;"></div>
-<div class="platform" style="left:800px;bottom:100px;"></div>
-<div class="platform" style="left:1100px;bottom:160px;"></div>
-
-<div class="enemy" style="left:450px;bottom:40px;"></div>
-<div class="enemy" style="left:900px;bottom:40px;"></div>
-
-<div class="goal" style="left:1300px;bottom:40px;"></div>
-
+<div id="enemy" class="enemy"></div>
 </div>
 
 <script>
 
 const player = document.getElementById("player");
-const game = document.getElementById("game");
+const enemy = document.getElementById("enemy");
+const scoreText = document.getElementById("score");
 
-let x = 100;
-let y = 0;
-let vy = 0;
-let onGround = true;
+let px = 200;
+let py = 200;
 
-let worldX = 0;
+let ex = 50;
+let ey = 50;
 
-const gravity = 0.8;
-const jump = -12;
+let score = 0;
+
+player.style.left = px + "px";
+player.style.top = py + "px";
+
+enemy.style.left = ex + "px";
+enemy.style.top = ey + "px";
 
 const keys = {};
 
 document.addEventListener("keydown",e=>{
     keys[e.key]=true;
-
-    if(e.code==="Space" && onGround){
-        vy = jump;
-        onGround=false;
-    }
 });
 
 document.addEventListener("keyup",e=>{
@@ -114,68 +84,45 @@ document.addEventListener("keyup",e=>{
 
 function update(){
 
-    if(keys["ArrowRight"]) worldX -= 5;
-    if(keys["ArrowLeft"]) worldX += 5;
+    if(keys["ArrowLeft"]) px -= 5;
+    if(keys["ArrowRight"]) px += 5;
+    if(keys["ArrowUp"]) py -= 5;
+    if(keys["ArrowDown"]) py += 5;
 
-    vy += gravity;
-    y += vy;
+    if(px<0) px=0;
+    if(px>470) px=470;
+    if(py<0) py=0;
+    if(py>470) py=470;
 
-    if(y < 0){
-        y = 0;
-        vy = 0;
-        onGround = true;
-    }
+    player.style.left = px+"px";
+    player.style.top = py+"px";
 
-    player.style.left = x + "px";
-    player.style.bottom = (40 + y) + "px";
+    // 敵が追いかける
+    if(px > ex) ex += 2;
+    if(px < ex) ex -= 2;
+    if(py > ey) ey += 2;
+    if(py < ey) ey -= 2;
 
-    document.querySelectorAll(".platform").forEach(p=>{
-        const base = parseInt(p.dataset.base || p.style.left);
-        if(!p.dataset.base) p.dataset.base = base;
-        p.style.left = (base + worldX) + "px";
-    });
+    enemy.style.left = ex+"px";
+    enemy.style.top = ey+"px";
 
-    document.querySelectorAll(".enemy").forEach(e=>{
-        const base = parseInt(e.dataset.base || e.style.left);
-        if(!e.dataset.base) e.dataset.base = base;
-        e.style.left = (base + worldX) + "px";
-
-        const ex = e.getBoundingClientRect();
-        const px = player.getBoundingClientRect();
-
-        if(
-            px.left < ex.right &&
-            px.right > ex.left &&
-            px.top < ex.bottom &&
-            px.bottom > ex.top
-        ){
-            alert("ゲームオーバー");
-            location.reload();
-        }
-    });
-
-    const goal = document.querySelector(".goal");
-    const base = parseInt(goal.dataset.base || goal.style.left);
-    if(!goal.dataset.base) goal.dataset.base = base;
-    goal.style.left = (base + worldX) + "px";
-
-    const gx = goal.getBoundingClientRect();
-    const px = player.getBoundingClientRect();
-
+    // 当たり判定
     if(
-        px.left < gx.right &&
-        px.right > gx.left &&
-        px.top < gx.bottom &&
-        px.bottom > gx.top
+        px < ex+30 &&
+        px+30 > ex &&
+        py < ey+30 &&
+        py+30 > ey
     ){
-        alert("クリア！");
+        alert("捕まった！スコア: "+score);
         location.reload();
     }
 
-    requestAnimationFrame(update);
+    score++;
+    scoreText.textContent = "スコア: "+score;
+
 }
 
-update();
+setInterval(update,30);
 
 </script>
 
