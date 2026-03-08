@@ -2,136 +2,139 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>避けるゲーム</title>
+<title>横スクロールゲーム</title>
 
 <style>
 body{
-    background:#111;
-    color:white;
-    text-align:center;
+    margin:0;
+    background:#87ceeb;
     font-family:sans-serif;
+    text-align:center;
 }
 
 h1{
-    margin-top:20px;
+    margin:10px;
 }
 
 #game{
-    width:400px;
-    height:500px;
-    background:#222;
-    margin:20px auto;
+    width:800px;
+    height:300px;
+    margin:auto;
+    background:#87ceeb;
     position:relative;
     overflow:hidden;
-    border:3px solid #555;
+    border:3px solid black;
 }
 
-#player{
+#ground{
+    position:absolute;
+    bottom:0;
+    width:2000px;
+    height:40px;
+    background:#654321;
+}
+
+.player{
+    width:30px;
+    height:30px;
+    background:#2563eb;
+    position:absolute;
+}
+
+.block{
     width:40px;
     height:40px;
-    background:#3b82f6;
+    background:#22c55e;
     position:absolute;
-    bottom:10px;
-    left:180px;
-}
-
-.enemy{
-    width:40px;
-    height:40px;
-    background:#ef4444;
-    position:absolute;
-}
-
-#score{
-    font-size:20px;
 }
 </style>
 </head>
 
 <body>
 
-<h1>避けるゲーム</h1>
-<p>← → キーで青い四角を動かして赤いブロックを避けよう！</p>
-<div id="score">スコア: 0</div>
+<h1>横スクロールゲーム</h1>
+<p>← → 移動 / スペース ジャンプ</p>
 
 <div id="game">
-<div id="player"></div>
+<div id="ground"></div>
+<div id="player" class="player"></div>
 </div>
 
 <script>
 
-const game = document.getElementById("game");
 const player = document.getElementById("player");
-const scoreText = document.getElementById("score");
+const game = document.getElementById("game");
 
-let playerX = 180;
-let score = 0;
-let enemies = [];
+let x = 50;
+let y = 0;
+let vy = 0;
+let onGround = true;
+let worldX = 0;
 
-document.addEventListener("keydown",(e)=>{
+const gravity = 0.8;
+const jumpPower = -12;
 
-    if(e.key==="ArrowLeft"){
-        playerX -= 20;
-    }
+const blocks = [
+{ x:300, y:0 },
+{ x:500, y:40 },
+{ x:700, y:0 },
+{ x:900, y:80 },
+{ x:1200, y:0 }
+];
 
-    if(e.key==="ArrowRight"){
-        playerX += 20;
-    }
-
-    if(playerX < 0) playerX = 0;
-    if(playerX > 360) playerX = 360;
-
-    player.style.left = playerX + "px";
-
+blocks.forEach(b=>{
+    const block=document.createElement("div");
+    block.className="block";
+    block.style.left=b.x+"px";
+    block.style.bottom=(40+b.y)+"px";
+    game.appendChild(block);
 });
 
-function createEnemy(){
+const keys = {};
 
-    const enemy = document.createElement("div");
-    enemy.classList.add("enemy");
+document.addEventListener("keydown",e=>{
+    keys[e.key]=true;
 
-    const x = Math.floor(Math.random()*10)*40;
-    enemy.style.left = x + "px";
-    enemy.style.top = "0px";
+    if(e.code==="Space" && onGround){
+        vy = jumpPower;
+        onGround=false;
+    }
+});
 
-    game.appendChild(enemy);
-
-    enemies.push({
-        element:enemy,
-        x:x,
-        y:0
-    });
-
-}
+document.addEventListener("keyup",e=>{
+    keys[e.key]=false;
+});
 
 function update(){
 
-    score++;
-    scoreText.textContent = "スコア: " + score;
-
-    if(Math.random() < 0.03){
-        createEnemy();
+    if(keys["ArrowRight"]){
+        worldX -= 5;
     }
 
-    enemies.forEach((enemy)=>{
+    if(keys["ArrowLeft"]){
+        worldX += 5;
+    }
 
-        enemy.y += 5;
-        enemy.element.style.top = enemy.y + "px";
+    vy += gravity;
+    y += vy;
 
-        if(
-            enemy.y + 40 > 450 &&
-            enemy.x < playerX + 40 &&
-            enemy.x + 40 > playerX
-        ){
-            alert("ゲームオーバー！ スコア: " + score);
-            location.reload();
-        }
+    if(y < 0){
+        y = 0;
+        vy = 0;
+        onGround = true;
+    }
 
+    player.style.left = x + "px";
+    player.style.bottom = (40 + y) + "px";
+
+    document.querySelectorAll(".block").forEach((b,i)=>{
+        b.style.left = (blocks[i].x + worldX) + "px";
     });
 
+    requestAnimationFrame(update);
 }
 
-setInterval(update,30);
+update();
 
 </script>
 
